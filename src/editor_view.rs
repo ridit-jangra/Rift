@@ -5,13 +5,15 @@ use gpui::{
     div, prelude::FluentBuilder as _, px,
 };
 use gpui_component::{
-    ActiveTheme, IconName, Sizable,
+    ActiveTheme, IconName, Sizable, TitleBar, WindowExt,
     button::{Button, ButtonVariants as _},
+    dialog::Dialog,
     h_flex,
     input::{Input, InputState},
     list::ListItem,
     resizable::{h_resizable, resizable_panel},
     status_bar::StatusBar,
+    switch::Switch,
     tab::{Tab, TabBar},
     tree::{TreeState, tree},
     v_flex,
@@ -24,6 +26,9 @@ pub struct EditorView {
     tree_state: Entity<TreeState>,
     open_files: Vec<PathBuf>,
     active_tab: Option<usize>,
+    line_number: bool,
+    soft_wrap: bool,
+    indent_guides: bool,
 }
 
 impl EditorView {
@@ -51,6 +56,9 @@ impl EditorView {
             tree_state,
             open_files: Vec::new(),
             active_tab: None,
+            line_number: true,
+            soft_wrap: false,
+            indent_guides: false,
         }
     }
 
@@ -104,6 +112,71 @@ impl EditorView {
             let new_active = ix.min(self.open_files.len() - 1);
             self.switch_tab(new_active, window, cx);
         }
+    }
+
+    fn open_settings(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let view = cx.entity();
+
+        window.open_dialog(cx, move |dialog: Dialog, _window, cx| {
+            let view_a = view.clone();
+            let view_b = view.clone();
+            let view_c = view.clone();
+
+            let line_number = view.read(cx).line_number;
+            let soft_wrap = view.read(cx).soft_wrap;
+            let indent_guides = view.read(cx).indent_guides;
+
+            dialog.title("Settings").child(
+                v_flex()
+                    .gap_3()
+                    .p_2()
+                    .child(
+                        Switch::new("line-number")
+                            .checked(line_number)
+                            .label("Line Numbers")
+                            .on_click(move |checked, window, cx| {
+                                let checked = *checked;
+                                view_a.update(cx, |this, cx| {
+                                    this.line_number = checked;
+                                    this.editor.update(cx, |state, cx| {
+                                        state.set_line_number(checked, window, cx);
+                                    });
+                                    cx.notify();
+                                });
+                            }),
+                    )
+                    .child(
+                        Switch::new("soft-wrap")
+                            .checked(soft_wrap)
+                            .label("Soft Wrap")
+                            .on_click(move |checked, window, cx| {
+                                let checked = *checked;
+                                view_b.update(cx, |this, cx| {
+                                    this.soft_wrap = checked;
+                                    this.editor.update(cx, |state, cx| {
+                                        state.set_soft_wrap(checked, window, cx);
+                                    });
+                                    cx.notify();
+                                });
+                            }),
+                    )
+                    .child(
+                        Switch::new("indent-guides")
+                            .checked(indent_guides)
+                            .label("Indent Guides")
+                            .on_click(move |checked, window, cx| {
+                                let checked = *checked;
+                                view_c.update(cx, |this, cx| {
+                                    this.indent_guides = checked;
+                                    this.editor.update(cx, |state, cx| {
+                                        state.set_indent_guides(checked, window, cx);
+                                    });
+                                    cx.notify();
+                                });
+                            }),
+                    ),
+            )
+        });
     }
 
     fn render_tab_bar(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -188,6 +261,8 @@ impl Render for EditorView {
             Input::new(&self.editor)
                 .h_full()
                 .w_full()
+                .font_family("monospace")
+                .text_size(px(14.))
                 .into_any_element()
         } else {
             div()
@@ -209,6 +284,7 @@ impl Render for EditorView {
 
         v_flex()
             .size_full()
+            .child(TitleBar::new().child(h_flex().w_full().pr_2().justify_between().child("Rift")))
             .child(
                 v_flex().w_full().flex_1().child(
                     h_resizable("editor-container")
@@ -223,7 +299,16 @@ impl Render for EditorView {
             .child(
                 StatusBar::new()
                     .left(SharedString::from(file_label))
-                    .right(SharedString::from(position_label)),
+                    .right(SharedString::from(position_label))
+                    .right(
+                        Button::new("open-settings")
+                            .icon(IconName::Settings)
+                            .ghost()
+                            .xsmall()
+                            .on_click(cx.listener(|this, _, window, cx| {
+                                this.open_settings(window, cx);
+                            })),
+                    ),
             )
     }
 }

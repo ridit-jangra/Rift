@@ -21,6 +21,10 @@ fn main() {
                 window_bounds: Some(WindowBounds::Windowed(window_bounds)),
                 titlebar: Some(TitleBar::title_bar_options()),
                 kind: WindowKind::Normal,
+                #[cfg(target_os = "linux")]
+                window_background: gpui::WindowBackgroundAppearance::Transparent,
+                #[cfg(target_os = "linux")]
+                window_decorations: Some(gpui::WindowDecorations::Client),
                 ..Default::default()
             },
             |window, cx| {
