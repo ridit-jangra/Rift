@@ -1,0 +1,9 @@
+[package]
+name = "rift"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ropey = "1.6"
+gpui = { git = "https://github.com/zed-industries/zed" }
+gpui_platform = { git = "https://github.com/zed-industries/zed", features = ["font-kit"] }
